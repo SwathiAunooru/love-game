@@ -1,70 +1,155 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Love Game 💖</title>
+<meta charset="UTF-8">
+<title>Love Catcher 💖</title>
+
+<style>
+body{
+  margin:0;
+  text-align:center;
+  font-family:Arial;
+  background:linear-gradient(#ffb6c1,#ffe4e1);
+}
+
+canvas{
+  background:white;
+  border-radius:15px;
+  margin-top:15px;
+  box-shadow:0 0 10px rgba(0,0,0,.3);
+}
+</style>
 </head>
 
-<body style="text-align:center; font-family:Arial; background:pink;">
+<body>
 
 <h1>💘 Love Catcher 💘</h1>
+<p>⬅️ ➡️ Move | Collect all hearts 💗</p>
 
-<canvas id="c" width="300" height="400"
-style="background:white;border:2px solid black;">
-</canvas>
+<canvas id="game" width="360" height="480"></canvas>
 
-<p id="msg"></p>
+<h2 id="msg"></h2>
 
 <script>
 
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let x = 130;
-let score = 0;
+const W = canvas.width;
+const H = canvas.height;
 
+// Player
+let player = {
+  x: W/2 - 20,
+  y: H - 50,
+  w: 40,
+  h: 40,
+  speed: 5
+};
+
+// Hearts
 let hearts = [];
+const TOTAL = 6;
 
-for(let i=0;i<5;i++){
+for(let i=0;i<TOTAL;i++){
   hearts.push({
-    x: Math.random()*260,
-    y: Math.random()*300,
+    x: Math.random()*(W-25),
+    y: Math.random()*(H-200)+40,
+    size:20,
     alive:true
   });
 }
 
-document.addEventListener("keydown", e=>{
-  if(e.key==="ArrowLeft") x-=20;
-  if(e.key==="ArrowRight") x+=20;
+// Controls
+let left=false,right=false;
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft") left=true;
+  if(e.key==="ArrowRight") right=true;
 });
 
+document.addEventListener("keyup",e=>{
+  if(e.key==="ArrowLeft") left=false;
+  if(e.key==="ArrowRight") right=false;
+});
+
+// Touch (mobile)
+canvas.addEventListener("touchmove",e=>{
+  let r=canvas.getBoundingClientRect();
+  player.x=e.touches[0].clientX-r.left-20;
+});
+
+// Collision
+function hit(a,b){
+  return a.x < b.x+b.size &&
+         a.x+a.w > b.x &&
+         a.y < b.y+b.size &&
+         a.y+a.h > b.y;
+}
+
+// Draw Heart
+function drawHeart(x,y,s){
+  ctx.fillStyle="#e91e63";
+
+  ctx.beginPath();
+  ctx.arc(x+s*.3,y+s*.3,s*.3,0,7);
+  ctx.arc(x+s*.7,y+s*.3,s*.3,0,7);
+
+  ctx.moveTo(x,y+s*.4);
+  ctx.lineTo(x+s/2,y+s);
+  ctx.lineTo(x+s,y+s*.4);
+  ctx.closePath();
+
+  ctx.fill();
+}
+
+let score=0;
+let win=false;
+
+// Game Loop
 function loop(){
 
-  ctx.clearRect(0,0,300,400);
+  // Move
+  if(!win){
+    if(left) player.x-=player.speed;
+    if(right) player.x+=player.speed;
 
-  // player
-  ctx.fillStyle="blue";
-  ctx.fillRect(x,350,40,40);
+    player.x=Math.max(0,Math.min(W-player.w,player.x));
 
-  // hearts
-  ctx.fillStyle="red";
-  hearts.forEach(h=>{
-    if(h.alive){
-      ctx.beginPath();
-      ctx.arc(h.x,h.y,10,0,6.28);
-      ctx.fill();
-
-      if(x<h.x+10 && x+40>h.x && 350<h.y+10){
+    hearts.forEach(h=>{
+      if(h.alive && hit(player,h)){
         h.alive=false;
         score++;
       }
+    });
+
+    if(score===TOTAL){
+      win=true;
+      document.getElementById("msg").innerText=
+        "I Love You 💖 Happy Valentine's Day!";
     }
+  }
+
+  // Draw
+  ctx.clearRect(0,0,W,H);
+
+  // Player
+  ctx.fillStyle="#2196f3";
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+
+  // Hearts
+  hearts.forEach(h=>{
+    if(h.alive) drawHeart(h.x,h.y,h.size);
   });
 
-  ctx.fillText("Score: "+score,10,20);
+  // Score
+  ctx.fillStyle="#880e4f";
+  ctx.font="18px Arial";
+  ctx.fillText(`Hearts: ${score}/${TOTAL}`,10,25);
 
-  if(score===5){
-    document.getElementById("msg").innerText =
-      "I Love You 💖";
+  if(win){
+    ctx.font="28px Arial";
+    ctx.fillText("YOU WIN 💖",120,230);
   }
 
   requestAnimationFrame(loop);
